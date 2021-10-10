@@ -50,7 +50,7 @@ Resources:
     Properties:
       Description: Function that runs when a relevant document is created within Thetis
         IMS
-      Handler: src/app/billy.documentHandler
+      Handler: src/app.documentHandler
       Environment:
         Variables:
           ClientId:
@@ -61,6 +61,8 @@ Resources:
             Ref: ApiKey
           BillyApiToken:
             Ref: BillyApiToken
+          ContextId:
+            Ref: ContextId
       Events:
         Request:
           Type: EventBridgeRule
