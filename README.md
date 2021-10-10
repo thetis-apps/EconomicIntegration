@@ -17,7 +17,7 @@ When installing the application you must provide values for the following parame
 - BillyApiToken
 - DevOpsEmail
 
-A short explanation for each of these parameters are provided upon installation.
+A short explanation for each of these parameters are provided upon installation. Furthermore, most of them are explained in our [Get started manual](https://introduction.thetis-ims.com/da/docs/InstallAddOn/).
 
 # Configuration
 
@@ -39,11 +39,13 @@ In the data document of the context:
 
 When a relevant document is created within Thetis IMS the application creates corresponding transactions within Billy. 
 
-The corresponding transactions depend on the type of the document.
+The accounts used on the corresponding transactions depend on the type of the document. So does the voucher number.
 
 ### Adjustment list
 
 The value of the document is posted against the inventory adjustment account and the inventory account.
+
+The transaction is given 'A-' plus the number of the adjustment list as its voucher number.
 
 ### Goods receipt
 
@@ -53,11 +55,19 @@ The value of the document is posted against the inventory account. The value of 
 
 The balance is posted against the cost of procurement account.
 
+The transaction is given 'G-' plus the number of the goods receipt as its voucher number.
+
 ### Cost of sales list
 
 The value of the document is posted against the inventory account and the cost of sales account.
 
+The transaction is given 'C-' plus the number of the cost of sales list as its voucher number.
+
 ### Cost variance list
 
 The value of the document is posted against the inventory account and the cost of procurement account.
+
+The transaction is given 'V-' plus the number of the cost variance list as its voucher number.
+
+
 
