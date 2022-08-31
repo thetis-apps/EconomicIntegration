@@ -1,20 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Application for integrating Thetis IMS with Billy
+Description: Application for integrating Thetis IMS with e-conomic
 
 # Metadata to use for the publishing to the SAR
 Metadata:
   AWS::ServerlessRepo::Application:
-    Name: thetis-ims-billy-integration
-    Description: Application for integration of Thetis IMS with Billy
+    Name: thetis-ims-economic-integration
+    Description: Application for integration of Thetis IMS with economic
     Author: thetis-apps
     SpdxLicenseId: Apache-2.0
     LicenseUrl: LICENSE.txt
     ReadmeUrl: README.md
     Labels: ['thetis-ims']
-    HomePageUrl: https://github.com/thetis-apps/BillyIntegration
+    HomePageUrl: https://github.com/thetis-apps/EconomicIntegration
     SemanticVersion: 0.0.1
-    SourceCodeUrl: https://github.com/thetis-apps/BillyIntegration
+    SourceCodeUrl: https://github.com/thetis-apps/EconomicIntegration
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -40,8 +40,8 @@ Parameters:
     Description: The api key that gives access to the context in Thetis IMS.
     Type: String
     MinLength: 1
-  BillyApiToken:
-    Description: The token that gives access to the context in Billy.
+  EconomicAccessToken:
+    Description: The token that gives access to the context in e-conomic.
     Type: String
     MinLength: 1
   DevOpsEmail:
@@ -64,8 +64,8 @@ Resources:
             Ref: ClientSecret
           ApiKey:
             Ref: ApiKey
-          BillyApiToken:
-            Ref: BillyApiToken
+          EconomicAccessToken:
+            Ref: EconomicAccessToken
           ContextId:
             Ref: ContextId
       Events:
@@ -83,6 +83,9 @@ Resources:
                 - COST_OF_SALES_LIST
                 - ADJUSTMENT_LIST
                 - COST_VARIANCE_LIST
+                - RETURN_RECEIPT
+                - DELIVERY_NOTE
+                - CONSIGNMENT_NOTE
                 contextId:
                 - Ref: ContextId
       Timeout: 100

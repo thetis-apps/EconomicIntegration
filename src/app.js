@@ -19,14 +19,16 @@ const axios = require('axios');
 var AWS = require('aws-sdk');
 AWS.config.update({region:'eu-west-1'});
 
-async function getBilly() {
+async function getEconomic() {
     
-    let billy = axios.create({
+    const appToken = 'Si7VAOfmXW2hkHhe6GSscgMGrrxNga5adYkQf2NGqRA1';
+    
+    let economic = axios.create({
             baseURL: 'https://api.billysbilling.com/v2/',
-    		headers: { 'X-Access-Token': process.env.BillyApiToken, 'Content-Type': 'application/json' }
+    		headers: { 'X-AppSecretToken': appToken, 'X-AgreementGrantToken': process.env.EconomicAccessToken, 'Content-Type': 'application/json' }
     	});
     	
-	billy.interceptors.response.use(function (response) {
+	economic.interceptors.response.use(function (response) {
 			console.log("SUCCESS " + JSON.stringify(response.data));
  	    	return response;
 		}, function (error) {
@@ -37,7 +39,7 @@ async function getBilly() {
 	    	return Promise.reject(error);
 		});
 		
-    return billy;
+    return economic;
 }
 
 async function getIMS() {
@@ -156,7 +158,7 @@ exports.documentHandler = async (event, awsContext) => {
     
     let ims = await getIMS();
     
-    let billy = await getBilly();
+    let billy = await getEconomic();
     let organization = await billy.get('organization');
     
     let response = await billy.get('accounts');
