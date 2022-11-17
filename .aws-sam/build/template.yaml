@@ -1,28 +1,29 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Application for integrating Thetis IMS with Billy
+Description: Application for integrating Thetis IMS with e-conomic
 Metadata:
   AWS::ServerlessRepo::Application:
-    Name: thetis-ims-billy-integration
-    Description: Application for integration of Thetis IMS with Billy
+    Name: thetis-ims-economic-integration
+    Description: Application for integration of Thetis IMS with economic
     Author: thetis-apps
     SpdxLicenseId: Apache-2.0
     LicenseUrl: ../../LICENSE.txt
     ReadmeUrl: ../../README.md
     Labels:
     - thetis-ims
-    HomePageUrl: https://github.com/thetis-apps/BillyIntegration
-    SemanticVersion: '0.0.1'
-    SourceCodeUrl: https://github.com/thetis-apps/BillyIntegration
+    HomePageUrl: https://github.com/thetis-apps/EconomicIntegration
+    SemanticVersion: '0.0.11'
+    SourceCodeUrl: https://github.com/thetis-apps/EconomicIntegration
 Globals:
   Function:
-    Runtime: nodejs12.x
+    Runtime: nodejs16.x
     MemorySize: 512
+    Timeout: 60
 Parameters:
   ContextId:
     Type: String
     Description: Context that this application is handling events for.
-    MinLength: '1'
+    MinLength: 1
   ClientId:
     Description: Key of the parameter that has your Thetis client id as its value.
     Type: AWS::SSM::Parameter::Value<String>
@@ -35,22 +36,41 @@ Parameters:
     Description: The api key that gives access to the context in Thetis IMS.
     Type: String
     MinLength: 1
-  BillyApiToken:
-    Description: The token that gives access to the context in Billy.
-    Type: String
-    MinLength: 1
   DevOpsEmail:
     Description: The email address to send mail to when messages in the dead letter
       queue.
     Type: String
     MinLength: 4
 Resources:
-  DocumentHandler:
+  SyncProductsRequestQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      KmsMasterKeyId: alias/aws/sqs
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+          - DeadLetterQueue
+          - Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 300
+  ProductQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      KmsMasterKeyId: alias/aws/sqs
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+          - DeadLetterQueue
+          - Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 300
+  RequestDispatcher:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Function that runs when a relevant document is created within Thetis
-        IMS
-      Handler: src/app.documentHandler
+      Description: Function for queueing products from e-conomic
+      Handler: src/app.dispatch
       Environment:
         Variables:
           ClientId:
@@ -59,38 +79,111 @@ Resources:
             Ref: ClientSecret
           ApiKey:
             Ref: ApiKey
-          BillyApiToken:
-            Ref: BillyApiToken
           ContextId:
             Ref: ContextId
+          SyncProductsRequestQueue:
+            Ref: SyncProductsRequestQueue
+      Policies:
+      - AmazonSQSFullAccess
+      Events:
+        ProductSyncRequest:
+          Type: Api
+          Properties:
+            Method: GET
+            Path: /syncProducts
+      CodeUri: RequestDispatcher
+    Metadata:
+      SamResourceId: RequestDispatcher
+  PullProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Function for pulling products from e-conomic
+      Handler: src/app.pullProducts
+      Environment:
+        Variables:
+          ClientId:
+            Ref: ClientId
+          ClientSecret:
+            Ref: ClientSecret
+          ApiKey:
+            Ref: ApiKey
+          ContextId:
+            Ref: ContextId
+          ProductQueue:
+            Ref: ProductQueue
+      Timeout: 300
+      Policies:
+      - AmazonSQSFullAccess
       Events:
         Request:
-          Type: EventBridgeRule
+          Type: SQS
           Properties:
-            Pattern:
-              source:
-              - public.thetis-ims.com
-              detail-type:
-              - documentCreated
-              detail:
-                documentType:
-                - GOODS_RECEIPT
-                - COST_OF_SALES_LIST
-                - ADJUSTMENT_LIST
-                - COST_VARIANCE_LIST
-                contextId:
-                - Ref: ContextId
-      Timeout: 100
-      DeadLetterQueue:
-        Type: SQS
-        TargetArn:
-          Fn::GetAtt:
-          - DeadLetterQueue
-          - Arn
-      CodeUri: DocumentHandler
+            Queue:
+              Fn::GetAtt:
+              - SyncProductsRequestQueue
+              - Arn
+            BatchSize: 1
+      CodeUri: PullProductsFunction
+    Metadata:
+      SamResourceId: PullProductsFunction
+  PushProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Function to push pages of products onto Thetis IMS
+      Handler: src/app.pushProducts
+      Environment:
+        Variables:
+          ClientId:
+            Ref: ClientId
+          ClientSecret:
+            Ref: ClientSecret
+          ApiKey:
+            Ref: ApiKey
+          ContextId:
+            Ref: ContextId
+      Timeout: 300
+      Events:
+        ProductsToPull:
+          Type: SQS
+          Properties:
+            Queue:
+              Fn::GetAtt:
+              - ProductQueue
+              - Arn
+            BatchSize: 1
+      CodeUri: PushProductsFunction
+    Metadata:
+      SamResourceId: PushProductsFunction
+  PullOrdersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Function for pulling orders from e-conomic to Thetis IMS
+      Handler: src/app.pullOrders
+      Environment:
+        Variables:
+          ClientId:
+            Ref: ClientId
+          ClientSecret:
+            Ref: ClientSecret
+          ApiKey:
+            Ref: ApiKey
+          ContextId:
+            Ref: ContextId
+      Timeout: 900
+      Events:
+        TimeToPullOrders:
+          Type: Schedule
+          Properties:
+            Schedule: cron(*/30 * * * ? *)
+      CodeUri: PullOrdersFunction
+    Metadata:
+      SamResourceId: PullOrdersFunction
   DeadLetterQueue:
     Type: AWS::SQS::Queue
-    Properties: {}
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      FifoQueue: true
+      VisibilityTimeout: 60
   Alarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -120,3 +213,8 @@ Resources:
           Ref: DevOpsEmail
         Protocol: email
       DisplayName: Incidents to be handled by Thetis Devops.
+Outputs:
+  Api:
+    Description: API Gatesam way endpoint URL for functions
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
