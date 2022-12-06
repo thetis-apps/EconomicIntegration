@@ -114,7 +114,7 @@ async function pushProduct(ims, economic, eventId, productGroups, economicProduc
 	if (found) {
 		productGroup = productGroups[i];
 	} else {
-		response = await ims.post('productGroups', { productGroupName: productGroupName });
+		response = await ims.post('productGroups', { productGroupName: productGroupName, itemLabelReportDescription: 'Poselabel' });
 		productGroup = response.data;
 		productGroups.push(productGroup);
 	}
@@ -124,6 +124,7 @@ async function pushProduct(ims, economic, eventId, productGroups, economicProduc
 	response = await ims.get('globalTradeItems', { params: { stockKeepingUnitMatch: economicProduct.productNumber, onlyActive: false }});
 	let globalTradeItems = response.data;
 	
+	let globalTradeItem;
 	if (globalTradeItems.length == 0) {
 		
 		// Lookup product
@@ -143,7 +144,7 @@ async function pushProduct(ims, economic, eventId, productGroups, economicProduc
 			product = products[0];
 		}
 	
-		let globalTradeItem = new Object();
+		globalTradeItem = new Object();
 		globalTradeItem.productId = product.id;
 		globalTradeItem.stockKeepingUnit = economicProduct.productNumber;
 		globalTradeItem.globalTradeItemNumber = economicProduct.barCode != null ? economicProduct.barCode : '++';
@@ -160,28 +161,56 @@ async function pushProduct(ims, economic, eventId, productGroups, economicProduc
 		
 	} else {
 		
-		let globalTradeItem = globalTradeItems[0];
-		let dataDocument = globalTradeItem.dataDocument != null ? JSON.parse(globalTradeItem.dataDocument) : { EconomicIntegration: { recommendedPrice: null, salesPrice: null }};
+		globalTradeItem = globalTradeItems[0];
+		let dataDocument = globalTradeItem.dataDocument != null ? JSON.parse(globalTradeItem.dataDocument) : new Object();
 		let prices = dataDocument.EconomicIntegration;
 		let patch = new Object();
-		if (prices.recommendedPrice != economicProduct.recommendedPrice) {
+		if (prices == undefined || prices.recommendedPrice != economicProduct.recommendedPrice) {
 			patch.recommendedPrice = economicProduct.recommendedPrice;
 		}
-		if (prices.salesPrice != economicProduct.salesPrice) {
+		if (prices == undefined || prices.salesPrice != economicProduct.salesPrice) {
 			patch.salesPrice = economicProduct.salesPrice;
 		}
-		if (prices.salesPrice != undefined || prices.recommendedPrice != undefined) {
-			await ims.patch('globalTradeItems/' + globalTradeItem.id + '/dataDocument', patch);
+		if (patch.salesPrice != undefined || patch.recommendedPrice != undefined) {
+			await ims.patch('globalTradeItems/' + globalTradeItem.id + '/dataDocument', { EconomicIntegration: patch });
 		}
 	}
 
-	/*
+
 	if (economicProduct.barCode == undefined || economicProduct.barCode == null) {
-		await economic.put('products/' + economicProduct.productNumber, { barCode: globalTradeItem.globalTradeItemNumber });
+		economicProduct.barCode = globalTradeItem.globalTradeItemNumber;
+		await economic.put('products/' + economicProduct.productNumber, economicProduct);
 	}
-	*/
 
 }
+
+exports.pullAndPushProduct = async (event, x) => {
+	
+	console.log(JSON.stringify(event));
+	
+    let ims = await getIMS();
+    
+    let response = await ims.get('contexts/' + process.env.ContextId);
+    let context = response.data;
+    if (context.dataDocument != null) {
+    	
+        let dataDocument = JSON.parse(context.dataDocument);
+        let setup = dataDocument.EconomicIntegration;
+        if (setup != null) {
+            
+            let economic = await getEconomic(setup.accessToken);
+        
+        	response = await ims.get('productGroups');
+			let productGroups = response.data;
+
+			response = await economic.get('products/' + event.productNumber);
+			let economicProduct = response.data;
+			
+			await pushProduct(ims, economic,'SINGLETON', productGroups, economicProduct);
+
+        }
+    }
+};
 
 exports.pushProducts = async (event, x) => {
 	

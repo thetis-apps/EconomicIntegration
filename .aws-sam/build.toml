@@ -8,6 +8,6 @@ architecture = "x86_64"
 handler = "src/app.queueProducts"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["RequestDispatcher", "PullProductsFunction", "PushProductsFunction", "PullOrdersFunction"]
+functions = ["RequestDispatcher", "PullProductsFunction", "PushProductsFunction", "PullAndPushProductFunction", "PullOrdersFunction"]
 
 [layer_build_definitions]

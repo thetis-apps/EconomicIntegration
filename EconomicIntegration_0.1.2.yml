@@ -7,8 +7,8 @@ Metadata:
     Description: Application for integration of Thetis IMS with economic
     Author: thetis-apps
     SpdxLicenseId: Apache-2.0
-    LicenseUrl: ../../LICENSE.txt
-    ReadmeUrl: ../../README.md
+    LicenseUrl: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/4612b8d5aa75b9b9936c9b7b9e6c7e82
+    ReadmeUrl: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/6897102163965750d58f01f4be0b3d89
     Labels:
     - thetis-ims
     HomePageUrl: https://github.com/thetis-apps/EconomicIntegration
@@ -54,6 +54,8 @@ Resources:
           - Arn
         maxReceiveCount: 3
       VisibilityTimeout: 300
+    Metadata:
+      SamResourceId: SyncProductsRequestQueue
   ProductQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -66,6 +68,8 @@ Resources:
           - Arn
         maxReceiveCount: 3
       VisibilityTimeout: 300
+    Metadata:
+      SamResourceId: ProductQueue
   RequestDispatcher:
     Type: AWS::Serverless::Function
     Properties:
@@ -91,7 +95,7 @@ Resources:
           Properties:
             Method: GET
             Path: /syncProducts
-      CodeUri: RequestDispatcher
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/307002e479f26b37c27a2c70f3d55095
     Metadata:
       SamResourceId: RequestDispatcher
   PullProductsFunction:
@@ -123,7 +127,7 @@ Resources:
               - SyncProductsRequestQueue
               - Arn
             BatchSize: 1
-      CodeUri: PullProductsFunction
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/307002e479f26b37c27a2c70f3d55095
     Metadata:
       SamResourceId: PullProductsFunction
   PushProductsFunction:
@@ -151,7 +155,7 @@ Resources:
               - ProductQueue
               - Arn
             BatchSize: 1
-      CodeUri: PushProductsFunction
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/307002e479f26b37c27a2c70f3d55095
     Metadata:
       SamResourceId: PushProductsFunction
   PullAndPushProductFunction:
@@ -170,7 +174,7 @@ Resources:
           ContextId:
             Ref: ContextId
       Timeout: 300
-      CodeUri: PullAndPushProductFunction
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/307002e479f26b37c27a2c70f3d55095
     Metadata:
       SamResourceId: PullAndPushProductFunction
   PullOrdersFunction:
@@ -194,7 +198,7 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: cron(*/30 * * * ? *)
-      CodeUri: PullOrdersFunction
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-1q52gionhjeg3/307002e479f26b37c27a2c70f3d55095
     Metadata:
       SamResourceId: PullOrdersFunction
   DeadLetterQueue:
@@ -203,6 +207,8 @@ Resources:
       KmsMasterKeyId: alias/aws/sqs
       FifoQueue: true
       VisibilityTimeout: 60
+    Metadata:
+      SamResourceId: DeadLetterQueue
   Alarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -224,6 +230,8 @@ Resources:
           - QueueName
       TreatMissingData: notBreaching
       Statistic: Maximum
+    Metadata:
+      SamResourceId: Alarm
   IncidentTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -232,6 +240,8 @@ Resources:
           Ref: DevOpsEmail
         Protocol: email
       DisplayName: Incidents to be handled by Thetis Devops.
+    Metadata:
+      SamResourceId: IncidentTopic
 Outputs:
   Api:
     Description: API Gatesam way endpoint URL for functions

@@ -13,7 +13,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['thetis-ims']
     HomePageUrl: https://github.com/thetis-apps/EconomicIntegration
-    SemanticVersion: 0.0.11
+    SemanticVersion: 0.1.2
     SourceCodeUrl: https://github.com/thetis-apps/EconomicIntegration
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -155,6 +155,23 @@ Resources:
               - ProductQueue
               - Arn
             BatchSize: 1
+
+  PullAndPushProductFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Function to pull and push a single product onto Thetis IMS
+      Handler: src/app.pullAndPushProduct
+      Environment:
+        Variables:
+          ClientId:
+            Ref: ClientId
+          ClientSecret:
+            Ref: ClientSecret
+          ApiKey:
+            Ref: ApiKey 
+          ContextId:
+            Ref: ContextId
+      Timeout: 300
 
   PullOrdersFunction: 
     Type: AWS::Serverless::Function
